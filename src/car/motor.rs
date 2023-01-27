@@ -1,15 +1,59 @@
-use arduino_hal::port::{Pin, mode::{Output, Input, Floating, Io}, PinOps};
-
 //circuito do l293d tem Vcc1 trocado com Vcc2!!!!!
-struct Motor<Port1, Port2> {
-    plus_pin: Pin<Output, Port1>,
-    minus_pin: Pin<Output, Port2>
+use arduino_hal::{
+    port::{mode::PwmOutput, Pin},
+    simple_pwm::PwmPinOps,
+};
+
+//controle só digital, depois colocar pwm
+pub struct Motor<PlusPort, PlusTimer, MinusPort, MinusTimer> {
+    plus_pin: Pin<PwmOutput<PlusTimer>, PlusPort>,
+    minus_pin: Pin<PwmOutput<MinusTimer>, MinusPort>,
 }
 
-impl<Port1: PinOps, Port2: PinOps> Motor<Port1, Port2>  {
-    fn new<PM: Io, MM: Io>(plus_pin: Pin<PM, Port1>, minus_pin: Pin<MM, Port2>) -> Motor<Port1, Port2> {
-        Motor { plus_pin: plus_pin.into_output(), minus_pin: minus_pin.into_output() }
+pub enum MotorState {
+    Forward(u8),
+    Backward(u8),
+    Still,
+}
+
+pub trait SettableMotor {
+    fn set_state(&mut self, state: MotorState);
+}
+
+impl<PlusPort, PlusTimer, MinusPort, MinusTimer> Motor<PlusPort, PlusTimer, MinusPort, MinusTimer> {
+    pub fn new(
+        plus_pin: Pin<PwmOutput<PlusTimer>, PlusPort>,
+        minus_pin: Pin<PwmOutput<MinusTimer>, MinusPort>,
+    ) -> Motor<PlusPort, PlusTimer, MinusPort, MinusTimer> {
+        Motor {
+            plus_pin,
+            minus_pin,
+        }
     }
+}
 
-
+impl<PlusPort, PlusTimer, MinusPort, MinusTimer> SettableMotor
+    for Motor<PlusPort, PlusTimer, MinusPort, MinusTimer>
+where
+    PlusPort: PwmPinOps<PlusTimer>,
+    MinusPort: PwmPinOps<MinusTimer>,
+{
+    fn set_state(&mut self, state: MotorState) {
+        match state {
+            MotorState::Forward(v) => {
+                self.plus_pin.set_duty(v);
+                self.minus_pin.set_duty(0);
+            }
+            MotorState::Backward(v) => {
+                self.plus_pin.set_duty(0);
+                self.minus_pin.set_duty(v);
+            }
+            MotorState::Still => {
+                self.plus_pin.set_duty(0);
+                self.minus_pin.set_duty(0);
+            }
+        }
+        self.plus_pin.enable();
+        self.minus_pin.enable();
+    }
 }
