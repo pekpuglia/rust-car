@@ -1,6 +1,7 @@
 pub mod motor;
 use motor::{ControllableMotor, NormalizedPower};
 
+//remover generics e hard-codar os pinos
 pub struct Car<Lmot, Rmot> {
     left_motor: Lmot,
     right_motor: Rmot,
@@ -52,9 +53,9 @@ where
     }
 }
 
-use arduino_hal::{simple_pwm::{IntoPwmPin, Prescaler, Timer0Pwm, Timer1Pwm, Timer2Pwm}, port::{Pin, mode::PwmOutput}, hal::port::{PD6, PB1, PD5, PD3}};
+use arduino_hal::{simple_pwm::{IntoPwmPin, Prescaler, Timer0Pwm, Timer1Pwm, Timer2Pwm}, hal::port::{PD6, PB1, PD5, PD3}};
 
-type DefaultLeftMotor = motor::Motor<PD6, Timer0Pwm, PB1, Timer1Pwm>;
+type DefaultLeftMotor = motor::Motor<PB1, Timer1Pwm, PD6, Timer0Pwm>;
 
 type DefaultRightMotor = motor::Motor<PD5, Timer0Pwm, PD3, Timer2Pwm>;
 
@@ -69,8 +70,8 @@ impl Default for Car<DefaultLeftMotor, DefaultRightMotor>
 
         Self::new(
             motor::Motor::new(
-                pins.d6.into_output().into_pwm(&timer0),
                 pins.d9.into_output().into_pwm(&timer1),
+                pins.d6.into_output().into_pwm(&timer0),
             ),
             motor::Motor::new(
                 pins.d5.into_output().into_pwm(&timer0),
