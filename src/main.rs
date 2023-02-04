@@ -7,9 +7,9 @@ use panic_halt as _;
 mod car;
 use car::{Car, ControllableCar};
 
-mod ir_sensor;
-
-use arduino_hal::{delay_ms};
+mod dist_sensor;
+use dist_sensor::DistanceSensor;
+use arduino_hal::{delay_ms, simple_pwm::IntoPwmPin};
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -19,11 +19,12 @@ fn main() -> ! {
 
     let mut adc = arduino_hal::Adc::new(dp.ADC, Default::default());
 
-    let a0 = pins.a0.into_analog_input(&mut adc);
+    let sensor = dist_sensor::ir_sensor::IRSensor::new(pins.a0.into_analog_input(&mut adc));
 
     loop {
-        let val = a0.analog_read(&mut adc);
-        ufmt::uwriteln!(&mut serial, "Medida: {}", val).unwrap();
-        delay_ms(500);
+        let val = sensor.calibrated_read(&mut adc);
+        let val_write = (val.val()*10.0_f32) as u32;
+        ufmt::uwriteln!(&mut serial, "Medida: {} mm", val_write).unwrap();
+        delay_ms(500); 
     }
 }
